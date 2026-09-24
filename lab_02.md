@@ -1,0 +1,67 @@
+# Построение бинарного дерева
+
+Построить бинарное дерево: базово — через словарь, затем — через структуры из `collections`.
+
+## Лот 1: через словарь
+
+```python
+"""Построение бинарного дерева рекурсивным способом."""
+from typing import Any
+
+
+def gen_bin_tree(height: int = 5, root: int = 10) -> dict[int, list[Any]]:
+    """Строит бинарное дерево в виде словаря.
+
+    Левый потомок: root * 3 + 1, правый потомок: 3 * root - 1.
+
+    Args:
+        height: высота дерева (0 - только корень).
+        root: значение в корне дерева.
+
+    Returns:
+        Словарь {значение: [левое поддерево, правое поддерево]}.
+        У листа список потомков пустой.
+    """
+    if height == 0:
+        return {root: []}
+    left = gen_bin_tree(height - 1, root * 3 + 1)
+    right = gen_bin_tree(height - 1, 3 * root - 1)
+    return {root: [left, right]}
+
+
+if __name__ == "__main__":
+    print(gen_bin_tree())
+```
+
+## Лот 2: через структуры
+
+```python
+"""Построение бинарного дерева через namedtuple из модуля collections."""
+from collections import namedtuple
+from typing import Optional
+
+Node = namedtuple("Node", "value left right")
+
+
+def gen_bin_tree(height: int = 5, root: int = 10) -> Optional[Node]:
+    """Строит бинарное дерево из именованных кортежей Node.
+
+    Левый потомок: root * 3 + 1, правый потомок: 3 * root - 1.
+
+    Args:
+        height: высота дерева (0 - только корень).
+        root: значение в корне дерева.
+
+    Returns:
+        Node(value, left, right). У листа left и right равны None.
+    """
+    if height == 0:
+        return Node(root, None, None)
+    left = gen_bin_tree(height - 1, root * 3 + 1)
+    right = gen_bin_tree(height - 1, 3 * root - 1)
+    return Node(root, left, right)
+
+
+if __name__ == "__main__":
+    print(gen_bin_tree())
+```
