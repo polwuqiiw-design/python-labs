@@ -13,9 +13,9 @@
 
 Затем указала своё имя и почту.
 
-![Проверка Git](screenshots/01-git-version.png)
+![Проверка Git](01-git-version.png)
 
-![Настройки Git](screenshots/02-git-config.png)
+![Настройки Git](02-git-config.png)
 
 ## 2. Создание репозитория
 
@@ -23,7 +23,7 @@
 
 Потом создала файл `hello.txt`, добавила его с помощью `git add` и сохранила через `git commit`.
 
-![Первый коммит](screenshots/03-init-first-commit.png)
+![Первый коммит](03-init-first-commit.png)
 
 ## 3. Изменение файла
 
@@ -31,9 +31,9 @@
 
 Команда `git diff` показала, что изменилось. После этого я сделала ещё один коммит.
 
-![Изменения файла](screenshots/04-git-diff.png)
+![Изменения файла](04-git-diff.png)
 
-![История коммитов](screenshots/05-git-log.png)
+![История коммитов](05-git-log.png)
 
 ## 4. Работа с ветками
 
@@ -41,11 +41,11 @@
 
 Перешла в неё, изменила файл и сохранила изменения.
 
-![Создание ветки](screenshots/06-git-branch.png)
+![Создание ветки](06-git-branch.png)
 
 Потом вернулась в основную ветку и объединила их командой `git merge`.
 
-![Объединение веток](screenshots/07-git-merge.png)
+![Объединение веток](07-git-merge.png)
 
 ## 5. Удаление файла
 
@@ -53,9 +53,9 @@
 
 После этого сохранила удаление коммитом.
 
-![Удаление файла](screenshots/08-git-rm.png)
+![Удаление файла](08-git-rm.png)
 
-![Коммит удаления](screenshots/09-git-delete-commit.png)
+![Коммит удаления](09-git-delete-commit.png)
 
 ## 6. Работа через VS Code
 
@@ -65,21 +65,21 @@
 
 Там изменила файл и посмотрела, какие строки добавились.
 
-![Изменения в VS Code](screenshots/10-vscode-diff.png)
+![Изменения в VS Code](10-vscode-diff.png)
 
 Затем сохранила изменения через кнопку **Commit**.
 
-![Коммит в VS Code](screenshots/11-vscode-commit.png)
+![Коммит в VS Code](11-vscode-commit.png)
 
 ## 7. Загрузка на GitHub
 
 Через VS Code я загрузила проект в свой аккаунт GitHub.
 
-![Публикация на GitHub](screenshots/12-github-publish.png)
+![Публикация на GitHub](12-github-publish.png)
 
 Затем проверила результат командой `git push`. Git показал, что все изменения уже загружены.
 
-![Проверка загрузки](screenshots/13-git-push.png)
+![Проверка загрузки](13-git-push.png)
 
 **Мой репозиторий:** [git_lab](https://github.com/polwuqiiw-design/git_lab)
 
