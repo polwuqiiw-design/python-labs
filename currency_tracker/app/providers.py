@@ -33,7 +33,7 @@ class RateProvider(ABC):
 
 
 class CbrXmlProvider(RateProvider):
-    """Получение курсов с сайта ЦБ РФ."""
+    """Получение курсов из XML ЦБ РФ."""
 
     URL = "https://www.cbr.ru/scripts/XML_daily.asp"
     TIMEOUT = 10
@@ -52,7 +52,6 @@ class CbrXmlProvider(RateProvider):
 
     @property
     def skipped_count(self) -> int:
-        """Количество пропущенных повреждённых записей."""
         return self._skipped_count
 
     def get_rates(self) -> dict[str, Rate]:
@@ -77,7 +76,6 @@ class CbrXmlProvider(RateProvider):
         return self._parse_xml(response.content)
 
     def _parse_xml(self, xml_data: bytes) -> dict[str, Rate]:
-        """Разобрать XML и запомнить число пропущенных записей."""
         rates, skipped = self._parse_with_count(xml_data)
         self._skipped_count = skipped
         return rates
@@ -91,6 +89,7 @@ class CbrXmlProvider(RateProvider):
             on_date = datetime.strptime(
                 root.attrib["Date"], "%d.%m.%Y"
             ).date()
+
         except (ET.ParseError, KeyError, ValueError) as exc:
             raise ProviderError(
                 f"Некорректный ответ ЦБ РФ: {exc}"
@@ -109,14 +108,15 @@ class CbrXmlProvider(RateProvider):
                     num_code = num_code.strip() or None
 
                 nominal = int(valute.findtext("Nominal", "0"))
+
                 value = Decimal(
                     valute.findtext("Value", "0").replace(",", ".")
                 )
 
                 if not code or not name:
-                    raise ValueError("Отсутствует код или название")
+                    raise ValueError("Нет кода или названия")
 
-                rate = Rate(
+                rates[code] = Rate(
                     code,
                     name,
                     nominal,
@@ -125,8 +125,6 @@ class CbrXmlProvider(RateProvider):
                     num_code=num_code,
                 )
 
-                rates[code] = rate
-
             except (ValueError, InvalidOperation, ValidationError):
                 skipped += 1
 
@@ -134,13 +132,12 @@ class CbrXmlProvider(RateProvider):
 
     @staticmethod
     def parse(xml_data: bytes) -> dict[str, Rate]:
-        """Разобрать XML без создания объекта поставщика."""
         rates, _ = CbrXmlProvider._parse_with_count(xml_data)
         return rates
 
 
 class StaticRateProvider(RateProvider):
-    """Курсы из готового списка без интернета."""
+    """Готовые курсы для работы без интернета."""
 
     def __init__(self, rates: Iterable[Rate]) -> None:
         self._rates = {rate.code: rate for rate in rates}
@@ -150,7 +147,6 @@ class StaticRateProvider(RateProvider):
 
     @classmethod
     def demo(cls) -> StaticRateProvider:
-        """Условные курсы для демонстрации."""
         today = date.today()
 
         return cls([
@@ -163,3 +159,90 @@ class StaticRateProvider(RateProvider):
             Rate("JPY", "Японских иен", 100, Decimal("53.0000"),
                  today, num_code="392"),
         ])
+
+
+class CbrJsonProvider(RateProvider):
+    """Получение курсов валют из JSON."""
+
+    URL = "https://www.cbr-xml-daily.ru/daily_json.js"
+    TIMEOUT = 10
+
+    def __init__(
+        self,
+        url: str | None = None,
+        timeout: float | None = None,
+    ) -> None:
+        self._url = url or self.URL
+        self._timeout = self.TIMEOUT if timeout is None else timeout
+
+    def get_rates(self) -> dict[str, Rate]:
+        """Загрузить курсы в формате JSON."""
+        try:
+            response = requests.get(
+                self._url,
+                timeout=self._timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        except requests.Timeout as exc:
+            raise ProviderError(
+                f"Сервер JSON не ответил за {self._timeout} секунд"
+            ) from exc
+
+        except requests.RequestException as exc:
+            raise ProviderError(
+                f"Не удалось получить JSON: {exc}"
+            ) from exc
+
+        except ValueError as exc:
+            raise ProviderError(
+                "Сервер вернул некорректный JSON"
+            ) from exc
+
+        return self.parse(data)
+
+    @staticmethod
+    def parse(data: dict) -> dict[str, Rate]:
+        """Преобразовать JSON в словарь курсов."""
+
+        try:
+            on_date = datetime.fromisoformat(
+                data["Date"].replace("Z", "+00:00")
+            ).date()
+
+            currencies = data["Valute"]
+
+            if not isinstance(currencies, dict):
+                raise ValueError("Valute должен быть словарём")
+
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ProviderError(
+                f"Некорректные данные JSON: {exc}"
+            ) from exc
+
+        rates: dict[str, Rate] = {}
+
+        for code, item in currencies.items():
+            try:
+                rate = Rate(
+                    code=item["CharCode"],
+                    name=item["Name"],
+                    nominal=int(item["Nominal"]),
+                    value=Decimal(str(item["Value"])),
+                    on_date=on_date,
+                    num_code=item.get("NumCode"),
+                )
+
+                rates[rate.code] = rate
+
+            except (
+                KeyError,
+                TypeError,
+                ValueError,
+                InvalidOperation,
+                ValidationError,
+            ):
+                continue
+
+        return rates

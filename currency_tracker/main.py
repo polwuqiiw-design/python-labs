@@ -4,7 +4,12 @@
 import sys
 
 from app.exceptions import AppError, ProviderError
-from app.providers import CbrXmlProvider, RateProvider, StaticRateProvider
+from app.providers import (
+    CbrJsonProvider,
+    CbrXmlProvider,
+    RateProvider,
+    StaticRateProvider,
+)
 from app.services import CurrencyTracker
 
 
@@ -20,15 +25,17 @@ MENU = """
 
 
 def choose_provider() -> RateProvider:
-    """Выбрать источник курсов валют."""
+    """Выбрать источник курсов."""
     if "--offline" in sys.argv:
         return StaticRateProvider.demo()
+
+    if "--json" in sys.argv:
+        return CbrJsonProvider()
 
     return CbrXmlProvider()
 
 
 def ask_user_id() -> int:
-    """Запросить номер пользователя."""
     return int(input("Ваш id: "))
 
 
@@ -36,11 +43,9 @@ def create_tracker() -> CurrencyTracker | None:
     """Создать трекер и загрузить валюты."""
     tracker = CurrencyTracker(choose_provider())
 
-    # try: пробуем получить курсы валют
     try:
         count = tracker.sync_currencies()
 
-    # except: обрабатываем ошибку получения данных
     except ProviderError as exc:
         print(f"Ошибка: {exc}")
 
@@ -55,11 +60,9 @@ def create_tracker() -> CurrencyTracker | None:
         count = tracker.sync_currencies()
         print(f"Автономный режим. Загружено валют: {count}")
 
-    # else: выполняется при успешной первоначальной загрузке
     else:
         print(f"Загружено валют: {count}")
 
-    # finally: выполняется независимо от результата
     finally:
         print("Синхронизация завершена")
 
@@ -67,7 +70,7 @@ def create_tracker() -> CurrencyTracker | None:
 
 
 def main() -> None:
-    """Запустить консольную программу."""
+    """Запустить программу."""
     tracker = create_tracker()
 
     if tracker is None:
@@ -83,9 +86,7 @@ def main() -> None:
                     input("Имя: "),
                     input("Email: "),
                 )
-                print(
-                    f"Зарегистрирован: {user} (id={user.id})"
-                )
+                print(f"Зарегистрирован: {user} (id={user.id})")
 
             elif choice == "2":
                 for currency in tracker.currencies:
