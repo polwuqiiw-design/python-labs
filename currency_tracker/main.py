@@ -20,6 +20,7 @@ MENU = """
 
 
 def choose_provider() -> RateProvider:
+    """Выбрать источник курсов валют."""
     if "--offline" in sys.argv:
         return StaticRateProvider.demo()
 
@@ -27,16 +28,49 @@ def choose_provider() -> RateProvider:
 
 
 def ask_user_id() -> int:
+    """Запросить номер пользователя."""
     return int(input("Ваш id: "))
 
 
-def main() -> None:
+def create_tracker() -> CurrencyTracker | None:
+    """Создать трекер и загрузить валюты."""
     tracker = CurrencyTracker(choose_provider())
 
+    # try: пробуем получить курсы валют
     try:
-        print(f"Загружено валют: {tracker.sync_currencies()}")
+        count = tracker.sync_currencies()
+
+    # except: обрабатываем ошибку получения данных
     except ProviderError as exc:
-        print(f"{exc}\nЗапустите программу с ключом --offline")
+        print(f"Ошибка: {exc}")
+
+        answer = input(
+            "Перейти в автономный режим? (y/n): "
+        ).strip().lower()
+
+        if answer != "y":
+            return None
+
+        tracker = CurrencyTracker(StaticRateProvider.demo())
+        count = tracker.sync_currencies()
+        print(f"Автономный режим. Загружено валют: {count}")
+
+    # else: выполняется при успешной первоначальной загрузке
+    else:
+        print(f"Загружено валют: {count}")
+
+    # finally: выполняется независимо от результата
+    finally:
+        print("Синхронизация завершена")
+
+    return tracker
+
+
+def main() -> None:
+    """Запустить консольную программу."""
+    tracker = create_tracker()
+
+    if tracker is None:
         return
 
     while True:
@@ -49,7 +83,9 @@ def main() -> None:
                     input("Имя: "),
                     input("Email: "),
                 )
-                print(f"Зарегистрирован: {user} (id={user.id})")
+                print(
+                    f"Зарегистрирован: {user} (id={user.id})"
+                )
 
             elif choice == "2":
                 for currency in tracker.currencies:
@@ -70,7 +106,13 @@ def main() -> None:
                 print("Подписка отменена")
 
             elif choice == "5":
-                rates = tracker.get_user_rates(ask_user_id())
+                user_id = ask_user_id()
+
+                try:
+                    rates = tracker.get_user_rates(user_id)
+                except ProviderError as exc:
+                    print(f"Ошибка получения курсов: {exc}")
+                    continue
 
                 for rate in sorted(rates, reverse=True):
                     print(rate)
@@ -86,7 +128,6 @@ def main() -> None:
                     print("На эту валюту пока никто не подписан")
 
             elif choice == "0":
-                print("До свидания!")
                 break
 
             else:
@@ -100,4 +141,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        pass
+    finally:
+        print("\nДо свидания")
