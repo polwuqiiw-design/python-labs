@@ -20,3 +20,7 @@ class NotFoundError(AppError):
 
 class ProviderError(AppError):
     """Ошибка получения курсов валют."""
+
+
+class InactiveUserError(AppError):
+    """Ошибка при действиях неактивного пользователя."""

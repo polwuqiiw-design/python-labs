@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from app.exceptions import DuplicateError, NotFoundError
+from app.exceptions import DuplicateError, InactiveUserError, NotFoundError
 from app.models import Currency, Rate, Subscription, User
 from app.providers import RateProvider
 
@@ -76,9 +76,16 @@ class CurrencyTracker:
         )
 
     def subscribe(self, user_id: int, code: str) -> Subscription:
-        """Подписать пользователя на валюту."""
+        """Подписать активного пользователя на валюту."""
+        user = self.get_user(user_id)
+
+        if not user.is_active:
+            raise InactiveUserError(
+                "Неактивный пользователь не может оформить подписку"
+            )
+
         subscription = Subscription(
-            self.get_user(user_id),
+            user,
             self.get_currency(code)
         )
 

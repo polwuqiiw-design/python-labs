@@ -63,10 +63,17 @@ class User(BaseEntity):
     _USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]+$")
     _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
-    def __init__(self, username: str, email: str) -> None:
+    def __init__(
+        self,
+        username: str,
+        email: str,
+        full_name: str | None = None
+    ) -> None:
         super().__init__()
         self.username = username
         self.email = email
+        self.full_name = full_name
+        self._is_active = True
 
     @property
     def username(self) -> str:
@@ -83,7 +90,9 @@ class User(BaseEntity):
             raise ValidationError("Имя должно содержать от 3 до 32 символов")
 
         if not self._USERNAME_PATTERN.fullmatch(value):
-            raise ValidationError("В имени разрешены латинские буквы, цифры и _")
+            raise ValidationError(
+                "В имени разрешены латинские буквы, цифры и _"
+            )
 
         self._username = value
 
@@ -103,9 +112,56 @@ class User(BaseEntity):
 
         self._email = value
 
+    @property
+    def full_name(self) -> str | None:
+        return self._full_name
+
+    @full_name.setter
+    def full_name(self, value: str | None) -> None:
+        if value is None:
+            self._full_name = None
+            return
+
+        if not isinstance(value, str):
+            raise ValidationError("Полное имя должно быть строкой")
+
+        value = value.strip()
+
+        if not 2 <= len(value) <= 100:
+            raise ValidationError(
+                "Полное имя должно содержать от 2 до 100 символов"
+            )
+
+        if not all(
+            char.isalpha() or char in " -"
+            for char in value
+        ):
+            raise ValidationError(
+                "В полном имени разрешены буквы, пробелы и дефис"
+            )
+
+        self._full_name = value
+
+    @property
+    def is_active(self) -> bool:
+        return self._is_active
+
+    def deactivate(self) -> None:
+        """Деактивировать пользователя."""
+        self._is_active = False
+
+    def activate(self) -> None:
+        """Активировать пользователя."""
+        self._is_active = True
+
     def to_dict(self) -> dict:
         data = super().to_dict()
-        data.update(username=self.username, email=self.email)
+        data.update(
+            username=self.username,
+            email=self.email,
+            full_name=self.full_name,
+            is_active=self.is_active
+        )
         return data
 
     def info(self) -> str:
@@ -122,7 +178,6 @@ class Currency(BaseEntity):
     """Валюта."""
 
     _id_counter = 0
-
     CODE_LENGTH = 3
 
     def __init__(self, code: str, name: str) -> None:
@@ -144,7 +199,9 @@ class Currency(BaseEntity):
         if len(value) != self.CODE_LENGTH or not (
             value.isascii() and value.isalpha()
         ):
-            raise ValidationError("Код валюты должен состоять из 3 латинских букв")
+            raise ValidationError(
+                "Код валюты должен состоять из 3 латинских букв"
+            )
 
         self._code = value
 
