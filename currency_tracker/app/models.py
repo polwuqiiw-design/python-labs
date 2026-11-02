@@ -239,3 +239,44 @@ class Rate:
             f"Rate({self.code!r}, "
             f"nominal={self.nominal}, value={self.value})"
         )
+
+
+class Subscription:
+    """Подписка пользователя на валюту."""
+
+    def __init__(self, user: User, currency: Currency) -> None:
+        if not isinstance(user, User):
+            raise TypeError("user должен быть объектом User")
+
+        if not isinstance(currency, Currency):
+            raise TypeError("currency должен быть объектом Currency")
+
+        self._user = user
+        self._currency = currency
+        self._created_at = datetime.now()
+
+    @property
+    def user(self) -> User:
+        return self._user
+
+    @property
+    def currency(self) -> Currency:
+        return self._currency
+
+    @property
+    def key(self) -> tuple[int, int]:
+        return self.user.id, self.currency.id
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Subscription):
+            return NotImplemented
+        return self.key == other.key
+
+    def __hash__(self) -> int:
+        return hash(self.key)
+
+    def __repr__(self) -> str:
+        return (
+            f"Subscription(user_id={self.user.id}, "
+            f"currency_id={self.currency.id})"
+        )
