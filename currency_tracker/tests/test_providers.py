@@ -90,3 +90,57 @@ def test_network_error(monkeypatch):
 
     with pytest.raises(ProviderError):
         provider.get_rates()
+
+
+def test_parse_num_code():
+    """Проверяем чтение цифрового кода из XML."""
+    xml_data = """<?xml version="1.0" encoding="utf-8"?>
+    <ValCurs Date="27.10.2026">
+        <Valute>
+            <NumCode>840</NumCode>
+            <CharCode>USD</CharCode>
+            <Nominal>1</Nominal>
+            <Name>Доллар США</Name>
+            <Value>80,5000</Value>
+        </Valute>
+    </ValCurs>""".encode("utf-8")
+
+    result = CbrXmlProvider.parse(xml_data)
+
+    assert result["USD"].num_code == "840"
+
+
+def test_timeout(monkeypatch):
+    """Проверяем ошибку при долгом ожидании сервера."""
+    def fake_get(*args, **kwargs):
+        raise requests.Timeout("Время ожидания истекло")
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+    with pytest.raises(ProviderError, match="не ответил"):
+        CbrXmlProvider().get_rates()
+
+
+def test_skipped_count():
+    """Проверяем подсчёт повреждённых записей."""
+    xml_data = """<?xml version="1.0" encoding="utf-8"?>
+    <ValCurs Date="27.10.2026">
+        <Valute>
+            <CharCode>USD</CharCode>
+            <Nominal>1</Nominal>
+            <Name>Доллар США</Name>
+            <Value>80,5000</Value>
+        </Valute>
+        <Valute>
+            <CharCode>EUR</CharCode>
+            <Nominal>abc</Nominal>
+            <Name>Евро</Name>
+            <Value>93,0000</Value>
+        </Valute>
+    </ValCurs>""".encode("utf-8")
+
+    provider = CbrXmlProvider()
+    rates = provider._parse_xml(xml_data)
+
+    assert len(rates) == 1
+    assert provider.skipped_count == 1

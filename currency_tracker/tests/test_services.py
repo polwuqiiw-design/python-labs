@@ -95,3 +95,25 @@ def test_not_found_is_app_error(tracker, user_id, code):
 
     with pytest.raises(AppError):
         tracker.subscribe(user_id, code)
+
+
+def test_inactive_user_cannot_subscribe(tracker):
+    """Неактивный пользователь не может подписаться."""
+    from app.exceptions import InactiveUserError
+
+    user = tracker.register_user("anna", "anna@example.com")
+    user.deactivate()
+
+    with pytest.raises(InactiveUserError):
+        tracker.subscribe(user.id, "USD")
+
+
+def test_currency_sync_num_code(tracker):
+    """Проверяем передачу цифрового кода в справочник."""
+    from app.providers import StaticRateProvider
+    from app.services import CurrencyTracker
+
+    service = CurrencyTracker(StaticRateProvider.demo())
+    service.sync_currencies()
+
+    assert service.get_currency("USD").num_code == "840"

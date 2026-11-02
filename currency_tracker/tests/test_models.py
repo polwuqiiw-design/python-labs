@@ -242,3 +242,79 @@ def test_subscription_hash():
     sub2 = Subscription(user, currency)
 
     assert len({sub1, sub2}) == 1
+
+
+@pytest.mark.parametrize(
+    "bad_name",
+    ["A", "", "Анна123", "Иван!", " " * 5, "А" * 101],
+)
+def test_invalid_full_name(bad_name):
+    """Проверяем неправильные полные имена."""
+    with pytest.raises(ValidationError):
+        User("anna", "anna@example.com", bad_name)
+
+
+def test_valid_full_name():
+    """Полное имя должно сохраняться без крайних пробелов."""
+    user = User(
+        "anna",
+        "anna@example.com",
+        " Анна Полторацкая "
+    )
+
+    assert user.full_name == "Анна Полторацкая"
+
+
+def test_user_active_status():
+    """Проверяем активацию и деактивацию."""
+    user = User("anna", "anna@example.com")
+
+    assert user.is_active is True
+
+    user.deactivate()
+    assert user.is_active is False
+
+    user.activate()
+    assert user.is_active is True
+
+
+def test_is_active_read_only():
+    """Статус нельзя изменять прямым присваиванием."""
+    user = User("anna", "anna@example.com")
+
+    with pytest.raises(AttributeError):
+        user.is_active = False
+
+
+def test_currency_num_code():
+    """Проверяем цифровой код валюты."""
+    currency = Currency("USD", "Доллар США", "840")
+
+    assert currency.num_code == "840"
+
+
+def test_invalid_num_code():
+    """Неверный цифровой код должен вызывать ошибку."""
+    with pytest.raises(ValidationError):
+        Currency("USD", "Доллар США", "84A")
+
+
+def test_rate_sorting():
+    """Курсы сортируются по стоимости одной единицы."""
+    from datetime import date
+    from decimal import Decimal
+    from app.models import Rate
+
+    day = date(2026, 10, 27)
+
+    rates = [
+        Rate("JPY", "Иена", 100, Decimal("53"), day),
+        Rate("EUR", "Евро", 1, Decimal("93"), day),
+        Rate("USD", "Доллар", 1, Decimal("80"), day),
+    ]
+
+    result = sorted(rates, reverse=True)
+
+    assert [rate.code for rate in result] == [
+        "EUR", "USD", "JPY"
+    ]
