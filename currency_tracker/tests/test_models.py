@@ -155,3 +155,90 @@ def test_currency_repr():
 
     assert "Currency" in repr(currency)
     assert "USD" in repr(currency)
+
+
+def test_rate_equality():
+    """Одинаковые курсы должны быть равны."""
+    from app.models import Rate
+    from datetime import date
+    from decimal import Decimal
+
+    day = date(2026, 10, 27)
+
+    rate1 = Rate("USD", "Доллар", 1, Decimal("80.5"), day)
+    rate2 = Rate("USD", "Доллар", 1, Decimal("80.5"), day)
+
+    assert rate1 == rate2
+
+
+def test_rate_hash():
+    """Одинаковые курсы не дублируются в множестве."""
+    from app.models import Rate
+    from datetime import date
+    from decimal import Decimal
+
+    day = date(2026, 10, 27)
+
+    rate1 = Rate("USD", "Доллар", 1, Decimal("80.5"), day)
+    rate2 = Rate("USD", "Доллар", 1, Decimal("80.5"), day)
+
+    assert len({rate1, rate2}) == 1
+
+
+def test_rate_invalid_nominal():
+    """Номинал не может быть нулевым."""
+    from app.models import Rate
+    from datetime import date
+    from decimal import Decimal
+
+    with pytest.raises(ValidationError):
+        Rate("USD", "Доллар", 0, Decimal("80.5"), date.today())
+
+
+def test_rate_invalid_value():
+    """Курс не может быть отрицательным."""
+    from app.models import Rate
+    from datetime import date
+    from decimal import Decimal
+
+    with pytest.raises(ValidationError):
+        Rate("USD", "Доллар", 1, Decimal("-5"), date.today())
+
+
+def test_subscription_creation():
+    """Создание подписки."""
+    from app.models import Subscription
+
+    user = User("anna", "anna@example.com")
+    currency = Currency("USD", "Доллар США")
+
+    subscription = Subscription(user, currency)
+
+    assert subscription.user == user
+    assert subscription.currency == currency
+
+
+def test_subscription_equality():
+    """Подписки одного пользователя на одну валюту равны."""
+    from app.models import Subscription
+
+    user = User("anna", "anna@example.com")
+    currency = Currency("USD", "Доллар США")
+
+    sub1 = Subscription(user, currency)
+    sub2 = Subscription(user, currency)
+
+    assert sub1 == sub2
+
+
+def test_subscription_hash():
+    """Одинаковые подписки не дублируются."""
+    from app.models import Subscription
+
+    user = User("anna", "anna@example.com")
+    currency = Currency("USD", "Доллар США")
+
+    sub1 = Subscription(user, currency)
+    sub2 = Subscription(user, currency)
+
+    assert len({sub1, sub2}) == 1
