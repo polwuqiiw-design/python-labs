@@ -1,5 +1,5 @@
 
-"""Консольное приложение для отслеживания курсов валют."""
+"""Консольный интерфейс трекера курсов валют."""
 
 import sys
 
@@ -20,7 +20,6 @@ MENU = """
 
 
 def choose_provider() -> RateProvider:
-    """Выбор источника курсов валют."""
     if "--offline" in sys.argv:
         return StaticRateProvider.demo()
 
@@ -28,7 +27,6 @@ def choose_provider() -> RateProvider:
 
 
 def ask_user_id() -> int:
-    """Запрос номера пользователя."""
     return int(input("Ваш id: "))
 
 
@@ -49,7 +47,7 @@ def main() -> None:
             if choice == "1":
                 user = tracker.register_user(
                     input("Имя: "),
-                    input("Email: ")
+                    input("Email: "),
                 )
                 print(f"Зарегистрирован: {user} (id={user.id})")
 
@@ -60,19 +58,21 @@ def main() -> None:
             elif choice == "3":
                 tracker.subscribe(
                     ask_user_id(),
-                    input("Код валюты: ")
+                    input("Код валюты: "),
                 )
                 print("Подписка оформлена")
 
             elif choice == "4":
                 tracker.unsubscribe(
                     ask_user_id(),
-                    input("Код валюты: ")
+                    input("Код валюты: "),
                 )
                 print("Подписка отменена")
 
             elif choice == "5":
-                for rate in tracker.get_user_rates(ask_user_id()):
+                rates = tracker.get_user_rates(ask_user_id())
+
+                for rate in sorted(rates, reverse=True):
                     print(rate)
 
             elif choice == "6":
@@ -101,4 +101,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-5

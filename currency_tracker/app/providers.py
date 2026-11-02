@@ -11,19 +11,18 @@ from decimal import Decimal, InvalidOperation
 
 import requests
 
-from app.exceptions import NotFoundError, ProviderError
+from app.exceptions import NotFoundError, ProviderError, ValidationError
 from app.models import Rate
 
 
 class RateProvider(ABC):
-    """Общий класс поставщиков курсов."""
+    """Общий интерфейс поставщиков курсов."""
 
     @abstractmethod
     def get_rates(self) -> dict[str, Rate]:
         """Получить все курсы валют."""
 
     def get_rate(self, code: str) -> Rate:
-        """Получить курс определённой валюты."""
         rates = self.get_rates()
         code = code.strip().upper()
 
@@ -45,7 +44,7 @@ class CbrXmlProvider(RateProvider):
     def __init__(
         self,
         url: str | None = None,
-        timeout: float | None = None
+        timeout: float | None = None,
     ) -> None:
         self._url = url or self.URL
         self._timeout = timeout or self.TIMEOUT
@@ -55,10 +54,9 @@ class CbrXmlProvider(RateProvider):
             response = requests.get(
                 self._url,
                 headers=self.HEADERS,
-                timeout=self._timeout
+                timeout=self._timeout,
             )
             response.raise_for_status()
-
         except requests.RequestException as exc:
             raise ProviderError(
                 f"Не удалось получить данные ЦБ РФ: {exc}"
@@ -68,25 +66,28 @@ class CbrXmlProvider(RateProvider):
 
     @staticmethod
     def parse(xml_data: bytes) -> dict[str, Rate]:
-        """Разбор XML с курсами валют."""
+        """Разобрать XML с курсами валют."""
 
         try:
             root = ET.fromstring(xml_data)
             on_date = datetime.strptime(
                 root.attrib["Date"], "%d.%m.%Y"
             ).date()
-
         except (ET.ParseError, KeyError, ValueError) as exc:
             raise ProviderError(
                 f"Некорректный ответ ЦБ РФ: {exc}"
             ) from exc
 
-        rates = {}
+        rates: dict[str, Rate] = {}
 
         for valute in root.findall("Valute"):
             try:
                 code = valute.findtext("CharCode", "").strip()
                 name = valute.findtext("Name", "").strip()
+
+                num_code = valute.findtext("NumCode")
+                if num_code is not None:
+                    num_code = num_code.strip() or None
 
                 nominal = int(
                     valute.findtext("Nominal", "0")
@@ -101,12 +102,13 @@ class CbrXmlProvider(RateProvider):
                     name,
                     nominal,
                     value,
-                    on_date
+                    on_date,
+                    num_code=num_code,
                 )
 
                 rates[code] = rate
 
-            except (ValueError, InvalidOperation):
+            except (ValueError, InvalidOperation, ValidationError):
                 continue
 
         return rates
@@ -130,8 +132,12 @@ class StaticRateProvider(RateProvider):
         today = date.today()
 
         return cls([
-            Rate("USD", "Доллар США", 1, Decimal("80.0000"), today),
-            Rate("EUR", "Евро", 1, Decimal("93.0000"), today),
-            Rate("CNY", "Китайский юань", 1, Decimal("11.2000"), today),
-            Rate("JPY", "Японских иен", 100, Decimal("53.0000"), today),
+            Rate("USD", "Доллар США", 1, Decimal("80.0000"),
+                 today, num_code="840"),
+            Rate("EUR", "Евро", 1, Decimal("93.0000"),
+                 today, num_code="978"),
+            Rate("CNY", "Китайский юань", 1, Decimal("11.2000"),
+                 today, num_code="156"),
+            Rate("JPY", "Японских иен", 100, Decimal("53.0000"),
+                 today, num_code="392"),
         ])

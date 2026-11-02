@@ -47,14 +47,20 @@ class CurrencyTracker:
         return list(self._users.values())
 
     def sync_currencies(self) -> int:
-        """Загрузить справочник валют."""
+        """Обновить справочник валют."""
         added = 0
 
         for code, rate in self._provider.get_rates().items():
             if code in self._currencies:
-                self._currencies[code].name = rate.name
+                currency = self._currencies[code]
+                currency.name = rate.name
+                currency.num_code = rate.num_code
             else:
-                self._currencies[code] = Currency(code, rate.name)
+                self._currencies[code] = Currency(
+                    code,
+                    rate.name,
+                    num_code=rate.num_code,
+                )
                 added += 1
 
         return added
@@ -72,7 +78,7 @@ class CurrencyTracker:
     def currencies(self) -> list[Currency]:
         return sorted(
             self._currencies.values(),
-            key=lambda c: c.code
+            key=lambda c: c.code,
         )
 
     def subscribe(self, user_id: int, code: str) -> Subscription:
@@ -86,7 +92,7 @@ class CurrencyTracker:
 
         subscription = Subscription(
             user,
-            self.get_currency(code)
+            self.get_currency(code),
         )
 
         if subscription in self._subscriptions:
@@ -99,7 +105,7 @@ class CurrencyTracker:
         """Удалить подписку."""
         subscription = Subscription(
             self.get_user(user_id),
-            self.get_currency(code)
+            self.get_currency(code),
         )
 
         if subscription not in self._subscriptions:
@@ -120,7 +126,7 @@ class CurrencyTracker:
         return sorted(found, key=lambda c: c.code)
 
     def get_subscribers(self, code: str) -> list[User]:
-        """Получить пользователей, подписанных на валюту."""
+        """Получить подписчиков валюты."""
         currency = self.get_currency(code)
 
         found = [
